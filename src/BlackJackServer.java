@@ -17,6 +17,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BlackJackServer extends JFrame
 {
@@ -37,7 +39,22 @@ public class BlackJackServer extends JFrame
     private boolean start = false; 
     private boolean isGameOver = false;
     private boolean isRoundOver = false;
-    
+    private Map <Face,Integer> faceValues = new HashMap <Face,Integer>();
+    {
+        faceValues.put(Face.Deuce, 2);
+        faceValues.put(Face.Three, 3);
+        faceValues.put(Face.Four, 4);
+        faceValues.put(Face.Five, 5);
+        faceValues.put(Face.Six, 6);
+        faceValues.put(Face.Seven, 7);
+        faceValues.put(Face.Eight, 8);
+        faceValues.put(Face.Nine, 9);
+        faceValues.put(Face.Ten, 10);
+        faceValues.put(Face.King, 10);
+        faceValues.put(Face.Queen, 10);
+        faceValues.put(Face.Jack, 10);
+    }
+  
     public BlackJackServer()
     {
         super("Black-Jack-Server");
@@ -127,7 +144,7 @@ public class BlackJackServer extends JFrame
     
     public Card addCardToDealerHand()
     {
-        Card cardToAdd = dealerHand.get(deckIndex);
+        Card cardToAdd = deck[deckIndex];
         dealerHand.add(cardToAdd);
         deckIndex--;
         return cardToAdd;
@@ -138,20 +155,33 @@ public class BlackJackServer extends JFrame
         start = status;
     }
 
+    public void finishRound()
+    {
+        isRoundOver = true;
+    }
+
+    public void finishGame()
+    {
+        isGameOver = true;
+    }
+
     private class Player implements Runnable
     {
         private Socket connection;
         private Scanner input;
         private Formatter output;
         private int playerNumber;
+        private int playerScore;
         private String mark;
         private List <Card> playerHand = new ArrayList<Card>();
+        private boolean finishRound = false;
 
         public Player(Socket socket, int number)
         {
             playerNumber = number;
             mark = MARKS[playerNumber];
             connection = socket;
+            playerScore = 0;
 
             try
             {
@@ -201,11 +231,72 @@ public class BlackJackServer extends JFrame
 
                 while(!isGameOver)
                 {
-                    dealCards(playerNumber);
-                    dealSecondCards(playerNumber);
+                    dealCards();
+                    dealAdditionalCards();
                     while(!isRoundOver)
                     {
+                        if(input.hasNextLine())
+                        {
+                            if(input.nextLine().equals("DRAW"))
+                                dealAdditionalCards();
+                            else if(input.nextLine().equals("DONE"));
+                                finishRoundPlayer();
+                        }
+                        if(players[0].isRoundFinished() && players[1].isRoundFinished())
+                        {
+                            finishRound();
+                            output.format("Round finished");
+                            output.flush();
+                        }
+                        if(playerNumber == PLAYER_X)
+                        {
+                            int dealerScore = 0;
+                            Card dealerFirst = dealerHand.get(0);
+                            displayMessage("Dealer's first card was " + dealerFirst.toString());
+                            for(Player player : players)
+                            {
+                                output.format("Dealer's first card was %s", dealerFirst);
+                                output.flush();
+                            }
+                            boolean dealerAceFound = false;
+                            int dealerAceCount = 0;
+                            for(Card card : dealerHand)
+                            {
+                                if(card.geFace() == Face.Ace)
+                                {
+                                    dealerAceCount++;
+                                    dealerAceFound = true;
+                                }
+                                else
+                                {
+                                    dealerScore += faceValues.get(card.geFace());
+                                }
+                            }
 
+                            if(dealerAceFound)
+                            {
+                                    if(dealerAceCount == 1)
+                                    {
+                                        dealerScore += 11;
+                                    }
+                                    else if(dealerAceCount == 2)
+                                    {
+                                        dealerScore = 12;
+                                    }
+                            }
+
+                            int dealerScoreAceTemp = dealerScore; 
+
+                            while(dealerScore <= 17 || dealerScoreAceTemp <= 17)
+                            {
+                                Card added = addCardToDealerHand();
+                                if(added.geFace() == Face.Ace)
+                                {
+                                    dealerScore += 11;
+                                    dealerScoreAceTemp += 1;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -223,7 +314,7 @@ public class BlackJackServer extends JFrame
             }
         }
 
-        public void dealCards(int playerNumber)
+        public void dealCards()
         {
             while(playerToDeal != playerNumber)
             {
@@ -267,10 +358,19 @@ public class BlackJackServer extends JFrame
                 }
             }
             playerToDeal = (playerNumber + 1) % 2; 
-            otherPlayerTurn.signal(); 
+
+            gameLock.lock();
+            try
+            {
+                otherPlayerTurn.signal();
+            }
+            finally
+            {
+                gameLock.unlock();
+            }
         }
 
-        public void dealSecondCards(int playerNumber)
+        public void dealAdditionalCards()
         {
             while(playerToDeal != playerNumber)
             {
@@ -296,16 +396,75 @@ public class BlackJackServer extends JFrame
             output.flush();
             
             playerToDeal = (playerNumber + 1) % 2; 
-            otherPlayerTurn.signal(); 
+            gameLock.lock();
+            try
+            {
+                otherPlayerTurn.signal();
+            }
+            finally
+            {
+                gameLock.unlock();
+            }
         }
-
 
         public Card addCardToHand()
         {
-            Card cardToAdd = dealerHand.get(deckIndex);
+            Card cardToAdd = deck[deckIndex];
             playerHand.add(cardToAdd);
             deckIndex--;
             return cardToAdd;
+        }
+
+        public int calculateScore()
+        {
+            boolean aceFound = false;
+            int aceCount = 0;
+            for(Card card : playerHand)
+            {
+                if(card.geFace() == Face.Ace)
+                {
+                    aceFound = true;
+                    aceCount++;
+                }
+                else
+                {
+                    playerScore += faceValues.get(card.geFace());
+                }
+            }
+
+            if(aceFound)
+            {
+                if(aceCount == 1)
+                {
+                    if((playerScore + 11) > 21)
+                        playerScore += 1;
+                    else
+                        playerScore += 11;
+                }
+                else if(aceCount == 2)
+                {
+                    if((playerScore + 12) > 21)
+                        playerScore += 2;
+                    else 
+                        playerScore += 12;
+                }
+                else 
+                {
+                    playerScore += (aceCount*1);
+                }
+            }
+
+            return playerScore;
+        }
+
+        public void finishRoundPlayer()
+        {
+            finishRound =true;
+        }
+
+        public boolean isRoundFinished()
+        {
+            return finishRound;
         }
     }
 }

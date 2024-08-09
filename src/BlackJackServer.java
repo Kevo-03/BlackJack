@@ -17,6 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+import javax.swing.JScrollPane;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ public class BlackJackServer extends JFrame
 {
     private Card[] deck = new Card[52];
     private List <Card> dealerHand = new ArrayList <Card>();
+    private int dealerScore = 0;
     private int deckIndex;
     private JTextArea outputArea;
     private ServerSocket server;
@@ -36,9 +38,11 @@ public class BlackJackServer extends JFrame
     private Lock gameLock;
     private Condition gameStarted;
     private Condition otherPlayerTurn;
+    private Condition dealerScoreCalculated;
     private boolean start = false; 
     private boolean isGameOver = false;
     private boolean isRoundOver = false;
+    private boolean dealerScoreCalculatedFlag = false;
     private Map <Face,Integer> faceValues = new HashMap <Face,Integer>();
     {
         faceValues.put(Face.Deuce, 2);
@@ -64,6 +68,7 @@ public class BlackJackServer extends JFrame
         gameLock = new ReentrantLock();
         gameStarted = gameLock.newCondition();
         otherPlayerTurn = gameLock.newCondition();
+        dealerScoreCalculated = gameLock.newCondition();
 
         int count = 0;
 
@@ -93,7 +98,8 @@ public class BlackJackServer extends JFrame
         }
 
         outputArea = new JTextArea();
-        add(outputArea,BorderLayout.CENTER);
+        outputArea.setEditable(false);
+        add(new JScrollPane(outputArea),BorderLayout.CENTER);
         outputArea.setText("server awaiting connectiıns\n");
         setSize(300,300);
         setVisible(true);
@@ -245,18 +251,40 @@ public class BlackJackServer extends JFrame
                         if(players[0].isRoundFinished() && players[1].isRoundFinished())
                         {
                             finishRound();
-                            output.format("Round finished");
+                            output.format("Round finished\ncCalculating scores...\n");
                             output.flush();
                         }
-                        if(playerNumber == PLAYER_X)
+                    }
+                    if(playerNumber == PLAYER_O)
+                    {
+                        gameLock.lock();
+                        try
                         {
-                            int dealerScore = 0;
+                            while(!dealerScoreCalculatedFlag)
+                            {
+                                dealerScoreCalculated.await();
+                            }
+                        }
+                        catch(InterruptedException interruptedException)
+                        {
+                            interruptedException.printStackTrace();
+                        }
+                        finally
+                        {
+                            gameLock.unlock();
+                        }
+                    }
+                    if(playerNumber == PLAYER_X)
+                    {
+                        gameLock.lock();
+                        try
+                            {
                             Card dealerFirst = dealerHand.get(0);
-                            displayMessage("Dealer's first card was " + dealerFirst.toString());
+                            displayMessage("Dealer's first card was " + dealerFirst.toString() + "\n");
                             for(Player player : players)
                             {
-                                output.format("Dealer's first card was %s", dealerFirst);
-                                output.flush();
+                                player.output.format("Dealer's first card was %s\n", dealerFirst);
+                                player.output.flush();
                             }
                             boolean dealerAceFound = false;
                             int dealerAceCount = 0;
@@ -296,6 +324,12 @@ public class BlackJackServer extends JFrame
                                     dealerScoreAceTemp += 1;
                                 }
                             }
+                            dealerScoreCalculatedFlag = true;
+                            dealerScoreCalculated.signal();
+                        }
+                        finally
+                        {
+                            gameLock.unlock();
                         }
                     }
                 }

@@ -1,6 +1,5 @@
 import java.awt.BorderLayout;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -207,10 +206,10 @@ public class BlackJackServer extends JFrame
             try
             {
                 displayMessage("Player" + mark + " connected\n");
-                output.format("%s",mark);
+                output.format("%s\n",mark);
                 output.flush();
 
-                output.format( "%s\n%s", "Player %s connected","Waiting for the game to start\n", mark );
+                output.format("Waiting for game to start\n");
                 output.flush(); 
 
                 gameLock.lock();
@@ -231,8 +230,8 @@ public class BlackJackServer extends JFrame
                     gameLock.unlock();
                 }
 
-                displayMessage("Game Starting");
-                output.format("Game starting");
+                displayMessage("Game Starting\n");
+                output.format("Game starting\n");
                 output.flush();
 
                 while(!isGameOver)
@@ -251,7 +250,7 @@ public class BlackJackServer extends JFrame
                         if(players[0].isRoundFinished() && players[1].isRoundFinished())
                         {
                             finishRound();
-                            output.format("Round finished\ncCalculating scores...\n");
+                            output.format("Round finished, calculating scores...\n");
                             output.flush();
                         }
                     }
@@ -370,24 +369,24 @@ public class BlackJackServer extends JFrame
             if(playerNumber == PLAYER_X)
             {
                 addCardToDealerHand();
-                displayMessage("Dealer started with first card");
+                displayMessage("Dealer started with first card\n");
                 for(Player player : players)
                 {
-                    player.output.format("Dealer started with first card");
+                    player.output.format("Dealer started with first card\n");
                     player.output.flush();
                 }
             }
             Card cardAdded = players[playerNumber].addCardToHand();
-            displayMessage("Player " + mark + " dealt with " + cardAdded);
-            output.format("You got %s",cardAdded);
+            displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
+            output.format("You got %s\n",cardAdded);
             output.flush();
             if(playerNumber == PLAYER_O)
             {
                 Card cardToDealer = addCardToDealerHand();
-                displayMessage("Dealer drawn " + cardToDealer);
+                displayMessage("Dealer drawn " + cardToDealer + "\n");
                 for(Player player : players)
                 {
-                    player.output.format("Dealer drawn %s", cardToDealer);
+                    player.output.format("Dealer drawn %s\n", cardToDealer);
                     player.output.flush();
                 }
             }
@@ -425,8 +424,8 @@ public class BlackJackServer extends JFrame
             }
 
             Card cardAdded = players[playerNumber].addCardToHand();
-            displayMessage("Player " + mark + " dealt with " + cardAdded);
-            output.format("You got %s",cardAdded);
+            displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
+            output.format("You got %s\n",cardAdded);
             output.flush();
             
             playerToDeal = (playerNumber + 1) % 2; 

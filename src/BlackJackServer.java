@@ -44,6 +44,7 @@ public class BlackJackServer extends JFrame
     private boolean dealerScoreCalculatedFlag = false;
     private Map <Face,Integer> faceValues = new HashMap <Face,Integer>();
     {
+        faceValues.put(Face.Ace,1);
         faceValues.put(Face.Deuce, 2);
         faceValues.put(Face.Three, 3);
         faceValues.put(Face.Four, 4);
@@ -285,43 +286,14 @@ public class BlackJackServer extends JFrame
                                 player.output.format("Dealer's first card was %s\n", dealerFirst);
                                 player.output.flush();
                             }
-                            boolean dealerAceFound = false;
-                            int dealerAceCount = 0;
                             for(Card card : dealerHand)
                             {
-                                if(card.geFace() == Face.Ace)
-                                {
-                                    dealerAceCount++;
-                                    dealerAceFound = true;
-                                }
-                                else
-                                {
-                                    dealerScore += faceValues.get(card.geFace());
-                                }
+                                dealerScore += faceValues.get(card.geFace());
                             }
-
-                            if(dealerAceFound)
-                            {
-                                    if(dealerAceCount == 1)
-                                    {
-                                        dealerScore += 11;
-                                    }
-                                    else if(dealerAceCount == 2)
-                                    {
-                                        dealerScore = 12;
-                                    }
-                            }
-
-                            int dealerScoreAceTemp = dealerScore; 
-
-                            while(dealerScore <= 17 || dealerScoreAceTemp <= 17)
+                            while(dealerScore <= 17)
                             {
                                 Card added = addCardToDealerHand();
-                                if(added.geFace() == Face.Ace)
-                                {
-                                    dealerScore += 11;
-                                    dealerScoreAceTemp += 1;
-                                }
+                                dealerScore += faceValues.get(added.geFace());
                             }
                             dealerScoreCalculatedFlag = true;
                             dealerScoreCalculated.signal();
@@ -331,6 +303,50 @@ public class BlackJackServer extends JFrame
                             gameLock.unlock();
                         }
                     }
+                    if(playerScore == 21)
+                    {
+                        output.format("Black Jack! You Won!\n");
+                        output.flush();
+                    }
+                    else if(playerScore > 21)
+                    {
+                        output.format("21 Exceeded. You Lost!\n");
+                        output.flush();
+                    }
+                    else if(dealerScore > 21 && playerScore < 21)
+                    {
+                        output.format("Dealer Exceeded 21. You Won!\n");
+                        output.flush();
+                    }
+                    else if(dealerScore == 21)
+                    {
+                        output.format("Dealer Hit Black Jack! You Lost!\n");
+                        output.flush();
+                    }
+                    else if((dealerScore < 21) && (playerScore > dealerScore))
+                    {
+                        output.format("You Exceeded Dealer's Hand. You Won!\n");
+                        output.flush();
+                    }
+                    else if((dealerScore < 21) && (playerScore < dealerScore))
+                    {
+                        output.format("Dealer Exceeded Your Hand. You Lost!\n");
+                        output.flush();
+                    }
+                    if(deckIndex < 0)
+                    {
+                        isGameOver = true;
+                        output.format("Deck is empty, game over\n");
+                        output.flush();
+                    }
+                    else
+                    {
+                        dealerHand.clear();
+                        playerHand.clear();
+                        output.format("Round is finished, starting another round\n");
+                        output.flush();
+                    }
+
                 }
             }
             finally
@@ -450,41 +466,9 @@ public class BlackJackServer extends JFrame
 
         public int calculateScore()
         {
-            boolean aceFound = false;
-            int aceCount = 0;
             for(Card card : playerHand)
             {
-                if(card.geFace() == Face.Ace)
-                {
-                    aceFound = true;
-                    aceCount++;
-                }
-                else
-                {
-                    playerScore += faceValues.get(card.geFace());
-                }
-            }
-
-            if(aceFound)
-            {
-                if(aceCount == 1)
-                {
-                    if((playerScore + 11) > 21)
-                        playerScore += 1;
-                    else
-                        playerScore += 11;
-                }
-                else if(aceCount == 2)
-                {
-                    if((playerScore + 12) > 21)
-                        playerScore += 2;
-                    else 
-                        playerScore += 12;
-                }
-                else 
-                {
-                    playerScore += (aceCount*1);
-                }
+                playerScore += faceValues.get(card.geFace());
             }
 
             return playerScore;

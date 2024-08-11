@@ -40,7 +40,7 @@ public class BlackJackClient extends JFrame implements Runnable
         markField = new JTextField();
         markField.setEditable(false);
         add(markField,BorderLayout.NORTH);
-        drawButton = new JButton();
+        drawButton = new JButton("DRAW");
         drawButton.addActionListener(
             new ActionListener() 
             {
@@ -52,7 +52,7 @@ public class BlackJackClient extends JFrame implements Runnable
                 }    
             }
         );
-        doneButton = new JButton();
+        doneButton = new JButton("DONE");
         doneButton.addActionListener(
             new ActionListener() 
             {
@@ -60,7 +60,6 @@ public class BlackJackClient extends JFrame implements Runnable
                 {
                     output.format("DONE\n");
                     output.flush();
-                    displayMessage("Round is finished\n");
                 }    
             }
         );
@@ -111,7 +110,7 @@ public class BlackJackClient extends JFrame implements Runnable
         {
             if(input.hasNextLine())
             {
-                displayMessage(input.nextLine());
+                displayMessage(input.nextLine() + "\n");
             }
         }
     }

@@ -259,7 +259,7 @@ public class BlackJackServer extends JFrame
                     {
                         gameLock.unlock();
                     }
-                    output.format("debugging, will be dealing cards\n");
+                    output.format("debugging, will be dealing cards\nPlayer to deal: %d\n", playerToDeal);
                     output.flush();
                     dealCards();
                     dealAdditionalCards();
@@ -267,15 +267,18 @@ public class BlackJackServer extends JFrame
                     {
                         if(input.hasNextLine())
                         {
-                            if(input.nextLine().equals("DRAW"))
+                            String command = input.nextLine();
+                            if(command.equals("DRAW"))
                                 dealAdditionalCards();
-                            else if(input.nextLine().equals("DONE"))
+                            else if(command.equals("DONE"))
                             {
                                 finishRoundPlayer();
+                                output.format("debugging done signal 1\n");
+                                output.flush();
                                 gameLock.lock();
                                 try
                                 {
-                                    output.format("debugging done signal\n");
+                                    output.format("debugging done signal 2\n");
                                     output.flush();
                                     roundCondition.signal();
                                 }
@@ -308,8 +311,12 @@ public class BlackJackServer extends JFrame
                     gameLock.lock();
                     try 
                     {
+                        output.format("debugging dealer calculation\nPlayer %d inside try body\n", playerNumber);
+                        output.flush();
                         if(!dealerScoreCalculatedFlag)
                         {
+                            output.format("debugging dealer calculation\nPlayer %d inside if\n", playerNumber);
+                            output.flush();
                             Card dealerFirst = dealerHand.get(0);
                             displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
                             for (Player player : players) 
@@ -343,7 +350,9 @@ public class BlackJackServer extends JFrame
                     {
                         gameLock.unlock();
                     }
-                    
+                    output.format("debugging dealer calculation\nPlayer %d outside of  try body\n", playerNumber);
+                    output.flush();
+                    calculateScore();
                     if(playerScore == 21)
                     {
                         output.format("Black Jack! You Won!\n");
@@ -384,13 +393,17 @@ public class BlackJackServer extends JFrame
                     {
                         dealerHand.clear();
                         playerHand.clear();
+                        playerScore = 0;
                         output.format("Round is finished, starting another round\n");
                         output.flush();
                         gameLock.lock();
                         try
                         {
                             if(dealerScoreCalculatedFlag)
+                            {
                                 dealerScoreCalculatedFlag = false;
+                                dealerScore = 0;
+                            }
                         }
                         finally
                         {

@@ -37,7 +37,8 @@ public class BlackJackServer extends JFrame
     private Lock gameLock;
     private Condition gameStarted;
     private Condition otherPlayerTurn;
-    private Condition dealerScoreCalculated;
+    private Condition roundCondition;
+    private Condition canStart;
     private boolean start = false; 
     private boolean isGameOver = false;
     private boolean isRoundOver = false;
@@ -68,8 +69,8 @@ public class BlackJackServer extends JFrame
         gameLock = new ReentrantLock();
         gameStarted = gameLock.newCondition();
         otherPlayerTurn = gameLock.newCondition();
-        dealerScoreCalculated = gameLock.newCondition();
-
+        roundCondition = gameLock.newCondition();
+        canStart = gameLock.newCondition();
         int count = 0;
 
         for(Suit suit : Suit.values())
@@ -181,6 +182,7 @@ public class BlackJackServer extends JFrame
         private String mark;
         private List <Card> playerHand = new ArrayList<Card>();
         private boolean finishRound = false;
+        private boolean canStartRound = true;
 
         public Player(Socket socket, int number)
         {
@@ -237,26 +239,70 @@ public class BlackJackServer extends JFrame
 
                 while(!isGameOver)
                 {
+                    output.format("debugging, reached the beginning\n");
+                    output.flush();
+                    gameLock.lock();
+                    try
+                    {
+                        while(!players[0].canStartRound || !players[1].canStartRound)
+                        {
+                            output.format("debugging, inside the while loop, will be waiting\n");
+                            output.flush();
+                            canStart.await();
+                        }
+                    }
+                    catch(InterruptedException exception)
+                    {
+                        exception.printStackTrace();
+                    }
+                    finally
+                    {
+                        gameLock.unlock();
+                    }
+                    output.format("debugging, will be dealing cards\n");
+                    output.flush();
                     dealCards();
                     dealAdditionalCards();
-                    while(!isRoundOver)
+                    while(true)
                     {
-                        if(players[0].isRoundFinished() && players[1].isRoundFinished())
-                        {
-                            displayMessage("debug\n");
-                            finishRound();
-                            output.format("Round finished, calculating scores...\n");
-                            output.flush();
-                            break;
-                        }
                         if(input.hasNextLine())
                         {
                             if(input.nextLine().equals("DRAW"))
                                 dealAdditionalCards();
                             else if(input.nextLine().equals("DONE"))
+                            {
                                 finishRoundPlayer();
+                                gameLock.lock();
+                                try
+                                {
+                                    output.format("debugging done signal\n");
+                                    output.flush();
+                                    roundCondition.signal();
+                                }
+                                finally
+                                {
+                                    gameLock.unlock();
+                                }
+                                break;
+                            }
                         }
                     }
+                    gameLock.lock();
+                    try
+                    {
+                        while(!players[0].isRoundFinished() || !players[1].isRoundFinished())
+                        {
+                            roundCondition.await();
+                        }
+                    }
+                    catch(InterruptedException exception)
+                    {
+                        exception.printStackTrace();
+                    }
+                    finally
+                    {
+                        gameLock.unlock();
+                    }   
                     output.format("Outside of the round loop\n");
                     output.flush();
                     gameLock.lock();
@@ -340,9 +386,31 @@ public class BlackJackServer extends JFrame
                         playerHand.clear();
                         output.format("Round is finished, starting another round\n");
                         output.flush();
-                        dealerScoreCalculatedFlag = false;
+                        gameLock.lock();
+                        try
+                        {
+                            if(dealerScoreCalculatedFlag)
+                                dealerScoreCalculatedFlag = false;
+                        }
+                        finally
+                        {
+                            gameLock.unlock();
+                        }
+                        finishRound = false;
+                        canStartRound = false;
+                        gameLock.lock();
+                        try
+                        {
+                            canStartRound = true;
+                            canStart.signal();
+                        }
+                        finally
+                        {
+                            gameLock.unlock();
+                        }
                     }
-
+                    output.format("debugging, reached the end\n");
+                    output.flush();
                 }
             }
             finally

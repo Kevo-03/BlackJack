@@ -239,6 +239,7 @@ public class BlackJackServer extends JFrame
 
                 while(!isGameOver)
                 {
+                    displayMessage("Reamining cards : " + deckIndex + "\n");
                     output.format("debugging, reached the beginning\n");
                     output.flush();
                     gameLock.lock();
@@ -264,6 +265,7 @@ public class BlackJackServer extends JFrame
                     dealCards();
                     dealAdditionalCards();
                     canStartRound = false;
+                    finishRound = false;
                     gameLock.lock();
                         try
                         {
@@ -292,21 +294,12 @@ public class BlackJackServer extends JFrame
                                 gameLock.lock();
                                 try
                                 {
+                                    finishRoundPlayer();
+                                    roundCondition.signal();
                                     output.format("debugging player to handle change\n");
                                     output.flush();
                                     playerToDeal = (playerNumber + 1) % 2; 
                                     otherPlayerTurn.signal();
-                                }
-                                finally
-                                {
-                                    gameLock.unlock();
-                                }
-                                gameLock.lock();
-                                try
-                                {
-                                    output.format("debugging done signal 2\n");
-                                    output.flush();
-                                    roundCondition.signal();
                                 }
                                 finally
                                 {
@@ -349,7 +342,7 @@ public class BlackJackServer extends JFrame
                             displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
                             for (Player player : players) 
                             {
-                                player.output.format("Showing dealer's hand\n%s\n", dealerFirst);
+                                player.output.format("Showing dealer's hand\n");
                                 player.output.flush();
                             }
                             for (Card card : dealerHand) 
@@ -370,6 +363,11 @@ public class BlackJackServer extends JFrame
                                     player.output.flush();
                                 }
                                 dealerScore += faceValues.get(added.geFace());
+                            }
+                            for (Player player : players) 
+                            {
+                                player.output.format("Dealer's score : %d\n", dealerScore);
+                                player.output.flush();
                             }
                             dealerScoreCalculatedFlag = true;
                         }
@@ -424,12 +422,12 @@ public class BlackJackServer extends JFrame
                         playerScore = 0;
                         output.format("Round is finished, starting another round\n");
                         output.flush();
-                        finishRound = false;
                         gameLock.lock();
                         try
                         {
                             canStartRound = true;
                             canStart.signal();
+                            roundCondition.signal();
                         }
                         finally
                         {
@@ -571,7 +569,8 @@ public class BlackJackServer extends JFrame
             {
                 playerScore += faceValues.get(card.geFace());
             }
-
+            output.format("Your score : %d\n", playerScore);
+            output.flush();
             return playerScore;
         }
 

@@ -60,6 +60,7 @@ public class BlackJackClient extends JFrame implements Runnable
                 {
                     output.format("DONE\n");
                     output.flush();
+                    displayMessage("Done for this round\n");
                 }    
             }
         );

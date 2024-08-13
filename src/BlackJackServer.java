@@ -241,6 +241,14 @@ public class BlackJackServer extends JFrame
                     dealAdditionalCards();
                     while(!isRoundOver)
                     {
+                        if(players[0].isRoundFinished() && players[1].isRoundFinished())
+                        {
+                            displayMessage("debug\n");
+                            finishRound();
+                            output.format("Round finished, calculating scores...\n");
+                            output.flush();
+                            break;
+                        }
                         if(input.hasNextLine())
                         {
                             if(input.nextLine().equals("DRAW"))
@@ -248,70 +256,48 @@ public class BlackJackServer extends JFrame
                             else if(input.nextLine().equals("DONE"))
                                 finishRoundPlayer();
                         }
-                        if(players[0].isRoundFinished() && players[1].isRoundFinished())
-                        {
-                            finishRound();
-                            output.format("Round finished, calculating scores...\n");
-                            output.flush();
-                        }
                     }
-                    if(playerNumber == PLAYER_O)
+                    output.format("Outside of the round loop\n");
+                    output.flush();
+                    gameLock.lock();
+                    try 
                     {
-                        gameLock.lock();
-                        try 
+                        if(!dealerScoreCalculatedFlag)
                         {
-                            if (playerNumber == PLAYER_O) 
+                            Card dealerFirst = dealerHand.get(0);
+                            displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
+                            for (Player player : players) 
                             {
-                                while (!dealerScoreCalculatedFlag) 
-                                {
-                                    try 
-                                    {
-                                        dealerScoreCalculated.await();
-                                    } 
-                                    catch (InterruptedException interruptedException) 
-                                    {
-                                        interruptedException.printStackTrace();
-                                    }
-                                }
+                                player.output.format("Showing dealer's hand\n%s\n", dealerFirst);
+                                player.output.flush();
                             }
-
-                            if (playerNumber == PLAYER_X) 
+                            for (Card card : dealerHand) 
                             {
-                                Card dealerFirst = dealerHand.get(0);
-                                displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
                                 for (Player player : players) 
                                 {
-                                    player.output.format("Showing dealer's hand\n%s\n", dealerFirst);
+                                    player.output.format("%s\n", card);
                                     player.output.flush();
                                 }
-                                for (Card card : dealerHand) 
-                                {
-                                    for (Player player : players) 
-                                    {
-                                        player.output.format("%s\n", card);
-                                        player.output.flush();
-                                    }
-                                    dealerScore += faceValues.get(card.geFace());
-                                }
-                                while (dealerScore <= 17) 
-                                {
-                                    Card added = addCardToDealerHand();
-                                    for (Player player : players) 
-                                    {
-                                        player.output.format("%s\n", added);
-                                        player.output.flush();
-                                    }
-                                    dealerScore += faceValues.get(added.geFace());
-                                }
-                                dealerScoreCalculatedFlag = true;
-                                dealerScoreCalculated.signal();
+                                dealerScore += faceValues.get(card.geFace());
                             }
-                        } 
-                        finally 
-                        {
-                            gameLock.unlock();
+                            while (dealerScore <= 17) 
+                            {
+                                Card added = addCardToDealerHand();
+                                for (Player player : players) 
+                                {
+                                    player.output.format("%s\n", added);
+                                    player.output.flush();
+                                }
+                                dealerScore += faceValues.get(added.geFace());
+                            }
+                            dealerScoreCalculatedFlag = true;
                         }
+                    } 
+                    finally 
+                    {
+                        gameLock.unlock();
                     }
+                    
                     if(playerScore == 21)
                     {
                         output.format("Black Jack! You Won!\n");
@@ -354,6 +340,7 @@ public class BlackJackServer extends JFrame
                         playerHand.clear();
                         output.format("Round is finished, starting another round\n");
                         output.flush();
+                        dealerScoreCalculatedFlag = false;
                     }
 
                 }
@@ -431,7 +418,7 @@ public class BlackJackServer extends JFrame
 
                 // It's this player's turn, so proceed
                 Card cardAdded = addCardToHand(); // Players access their own hand
-                displayMessage("Player " + mark + " dealt with " + cardAdded);
+                displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
                 output.format("You got %s\n", cardAdded);
                 output.flush();
                 

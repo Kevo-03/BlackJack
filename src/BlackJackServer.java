@@ -263,18 +263,44 @@ public class BlackJackServer extends JFrame
                     output.flush();
                     dealCards();
                     dealAdditionalCards();
+                    canStartRound = false;
+                    gameLock.lock();
+                        try
+                        {
+                            if(dealerScoreCalculatedFlag)
+                            {
+                                dealerScoreCalculatedFlag = false;
+                                dealerScore = 0;
+                            }
+                        }
+                        finally
+                        {
+                            gameLock.unlock();
+                        }
                     while(true)
                     {
                         if(input.hasNextLine())
                         {
                             String command = input.nextLine();
                             if(command.equals("DRAW"))
-                                dealAdditionalCards();
+                                drawCard();
                             else if(command.equals("DONE"))
                             {
                                 finishRoundPlayer();
                                 output.format("debugging done signal 1\n");
                                 output.flush();
+                                gameLock.lock();
+                                try
+                                {
+                                    output.format("debugging player to handle change\n");
+                                    output.flush();
+                                    playerToDeal = (playerNumber + 1) % 2; 
+                                    otherPlayerTurn.signal();
+                                }
+                                finally
+                                {
+                                    gameLock.unlock();
+                                }
                                 gameLock.lock();
                                 try
                                 {
@@ -295,6 +321,8 @@ public class BlackJackServer extends JFrame
                     {
                         while(!players[0].isRoundFinished() || !players[1].isRoundFinished())
                         {
+                            output.format("debugging. Player %d waiting for other player\n", playerNumber);
+                            output.flush();
                             roundCondition.await();
                         }
                     }
@@ -396,21 +424,7 @@ public class BlackJackServer extends JFrame
                         playerScore = 0;
                         output.format("Round is finished, starting another round\n");
                         output.flush();
-                        gameLock.lock();
-                        try
-                        {
-                            if(dealerScoreCalculatedFlag)
-                            {
-                                dealerScoreCalculatedFlag = false;
-                                dealerScore = 0;
-                            }
-                        }
-                        finally
-                        {
-                            gameLock.unlock();
-                        }
                         finishRound = false;
-                        canStartRound = false;
                         gameLock.lock();
                         try
                         {
@@ -514,6 +528,32 @@ public class BlackJackServer extends JFrame
             finally 
             {
                 gameLock.unlock(); // Unlock after the turn is done
+            }
+        }
+
+        public void drawCard()
+        {
+            gameLock.lock();
+            try
+            {
+                while (playerToDeal != playerNumber) 
+                {
+                    otherPlayerTurn.await(); // Wait until it's this player's turn
+                }
+
+                // It's this player's turn, so proceed
+                Card cardAdded = addCardToHand(); // Players access their own hand
+                displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
+                output.format("You got %s\n", cardAdded);
+                output.flush();
+            }
+            catch(InterruptedException interruptedException)
+            {
+                interruptedException.printStackTrace();
+            }
+            finally
+            {
+                gameLock.unlock();
             }
         }
 

@@ -288,7 +288,6 @@ public class BlackJackServer extends JFrame
                                 drawCard();
                             else if(command.equals("DONE"))
                             {
-                                finishRoundPlayer();
                                 output.format("debugging done signal 1\n");
                                 output.flush();
                                 gameLock.lock();
@@ -501,23 +500,22 @@ public class BlackJackServer extends JFrame
 
         public void dealAdditionalCards()
         {
-            gameLock.lock(); // Lock before entering the loop
+            gameLock.lock(); 
             try 
             {
                 while (playerToDeal != playerNumber) 
                 {
-                    otherPlayerTurn.await(); // Wait until it's this player's turn
+                    otherPlayerTurn.await(); 
                 }
 
-                // It's this player's turn, so proceed
-                Card cardAdded = addCardToHand(); // Players access their own hand
+                Card cardAdded = addCardToHand(); 
                 displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
                 output.format("You got %s\n", cardAdded);
                 output.flush();
                 
-                playerToDeal = (playerNumber + 1) % 2; // Switch turn to the other player
+                playerToDeal = (playerNumber + 1) % 2; 
                 
-                otherPlayerTurn.signal(); // Signal the other player that it's their turn
+                otherPlayerTurn.signal(); 
             } 
             catch (InterruptedException interruptedException) 
             {
@@ -525,7 +523,7 @@ public class BlackJackServer extends JFrame
             } 
             finally 
             {
-                gameLock.unlock(); // Unlock after the turn is done
+                gameLock.unlock(); 
             }
         }
 
@@ -536,11 +534,10 @@ public class BlackJackServer extends JFrame
             {
                 while (playerToDeal != playerNumber) 
                 {
-                    otherPlayerTurn.await(); // Wait until it's this player's turn
+                    otherPlayerTurn.await(); 
                 }
 
-                // It's this player's turn, so proceed
-                Card cardAdded = addCardToHand(); // Players access their own hand
+                Card cardAdded = addCardToHand(); 
                 displayMessage("Player " + mark + " dealt with " + cardAdded + "\n");
                 output.format("You got %s\n", cardAdded);
                 output.flush();

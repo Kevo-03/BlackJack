@@ -293,12 +293,20 @@ public class BlackJackServer extends JFrame
                                 gameLock.lock();
                                 try
                                 {
+                                    while(playerToDeal != playerNumber)
+                                    {
+                                        otherPlayerTurn.await();
+                                    }
                                     finishRoundPlayer();
                                     roundCondition.signal();
                                     output.format("debugging player to handle change\n");
                                     output.flush();
                                     playerToDeal = (playerNumber + 1) % 2; 
                                     otherPlayerTurn.signal();
+                                }
+                                catch(InterruptedException exception)
+                                {
+                                    exception.printStackTrace();
                                 }
                                 finally
                                 {

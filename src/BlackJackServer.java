@@ -262,23 +262,36 @@ public class BlackJackServer extends JFrame
                     }
                     output.format("debugging, will be dealing cards\nPlayer to deal: %d\n", playerToDeal);
                     output.flush();
+                    gameLock.lock();
+                    try
+                    {
+                        if(deckIndex <= 15)
+                        {
+                            shuffleDeck();
+                            deckIndex = 51;
+                        }
+                    }
+                    finally
+                    {
+                        gameLock.unlock();
+                    }
                     dealCards();
                     dealAdditionalCards();
                     canStartRound = false;
                     finishRound = false;
                     gameLock.lock();
-                        try
+                    try
+                    {
+                        if(dealerScoreCalculatedFlag)
                         {
-                            if(dealerScoreCalculatedFlag)
-                            {
-                                dealerScoreCalculatedFlag = false;
-                                dealerScore = 0;
-                            }
+                            dealerScoreCalculatedFlag = false;
+                            dealerScore = 0;
                         }
-                        finally
-                        {
-                            gameLock.unlock();
-                        }
+                    }
+                    finally
+                    {
+                        gameLock.unlock();
+                    }
                     while(true)
                     {
                         if(input.hasNextLine())

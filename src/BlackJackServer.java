@@ -373,6 +373,8 @@ public class BlackJackServer extends JFrame
                                     player.output.flush();
                                 }
                                 dealerScore += faceValues.get(card.geFace());
+                                if((card.geFace() == Face.Ace) && (dealerScore + 10) < 21)
+                                    dealerScore += 10;
                             }
                             while (dealerScore <= 17) 
                             {
@@ -383,6 +385,8 @@ public class BlackJackServer extends JFrame
                                     player.output.flush();
                                 }
                                 dealerScore += faceValues.get(added.geFace());
+                                if((added.geFace() == Face.Ace) && (dealerScore + 10 ) < 21)
+                                    dealerScore += 10;
                             }
                             for (Player player : players) 
                             {
@@ -583,9 +587,18 @@ public class BlackJackServer extends JFrame
 
         public int calculateScore()
         {
+            int aces = 0;
             for(Card card : playerHand)
             {
-                playerScore += faceValues.get(card.geFace());
+                int value = faceValues.get(card.geFace());
+                if(card.geFace() == Face.Ace)
+                    aces++;
+                playerScore += value;
+            }
+            while (aces > 0 && playerScore + 10 <= 21) 
+            {
+                playerScore += 10;
+                aces--;
             }
             output.format("Your score : %d\n", playerScore);
             output.flush();

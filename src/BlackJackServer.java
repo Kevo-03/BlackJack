@@ -374,6 +374,7 @@ public class BlackJackServer extends JFrame
                         {
                             //output.format("debugging dealer calculation\nPlayer %d inside if\n", playerNumber);
                             //output.flush();
+                            int aces = 0;
                             Card dealerFirst = dealerHand.get(0);
                             displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
                             for (Player player : players) 
@@ -389,10 +390,13 @@ public class BlackJackServer extends JFrame
                                     player.output.flush();
                                 }
                                 dealerScore += faceValues.get(card.geFace());
-                                if((card.geFace() == Face.Ace) && (dealerScore + 10) < 21)
+                                if((card.geFace() == Face.Ace) && (dealerScore + 10) <= 21) 
+                                {
+                                    aces++;
                                     dealerScore += 10;
+                                }
                             }
-                            while (dealerScore <= 17) 
+                            while (dealerScore < 17) 
                             {
                                 Card added = addCardToDealerHand();
                                 for (Player player : players) 
@@ -401,8 +405,16 @@ public class BlackJackServer extends JFrame
                                     player.output.flush();
                                 }
                                 dealerScore += faceValues.get(added.geFace());
-                                if((added.geFace() == Face.Ace) && (dealerScore + 10 ) < 21)
+                                if((added.geFace() == Face.Ace) && (dealerScore + 10) <= 21) 
+                                {
+                                    aces++;
                                     dealerScore += 10;
+                                }
+                                while(aces > 0 && dealerScore > 21)
+                                {
+                                    aces--;
+                                    dealerScore -= 10;
+                                }
                             }
                             for (Player player : players) 
                             {

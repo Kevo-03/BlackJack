@@ -22,6 +22,7 @@ public class BlackJackClient extends JFrame implements Runnable
 {
     private JButton drawButton;
     private JButton doneButton;
+    private JButton finishButton;
     private JPanel buttonPanel;
     private JTextArea displayArea;
     private JTextField markField;
@@ -64,13 +65,26 @@ public class BlackJackClient extends JFrame implements Runnable
                 }    
             }
         );
-        
+        finishButton = new JButton("FINISH");
+        finishButton.addActionListener(
+            new ActionListener() 
+            {
+                public void actionPerformed(ActionEvent event)
+                {
+                    output.format("FINISH\n");
+                    output.flush();
+                    displayMessage("Game finished\n");
+                    System.exit(0);
+                }    
+            }
+        );
         buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER,10,5));
         buttonPanel.add(drawButton);
         buttonPanel.add(doneButton);
+        buttonPanel.add(finishButton);
         add(buttonPanel,BorderLayout.SOUTH);
 
-        setSize(300,300);
+        setSize(400,400);
         setVisible(true);
         startPlayer();
     }

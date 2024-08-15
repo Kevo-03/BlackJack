@@ -41,7 +41,6 @@ public class BlackJackServer extends JFrame
     private Condition canStart;
     private boolean start = false; 
     private boolean isGameOver = false;
-    private boolean isRoundOver = false;
     private boolean dealerScoreCalculatedFlag = false;
     private Map <Face,Integer> faceValues = new HashMap <Face,Integer>();
     {
@@ -102,7 +101,7 @@ public class BlackJackServer extends JFrame
         outputArea.setEditable(false);
         add(new JScrollPane(outputArea),BorderLayout.CENTER);
         outputArea.setText("server awaiting connectiıns\n");
-        setSize(300,300);
+        setSize(400,400);
         setVisible(true);
     }
 
@@ -160,11 +159,6 @@ public class BlackJackServer extends JFrame
     public void setStartGame(boolean status)
     {
         start = status;
-    }
-
-    public void finishRound()
-    {
-        isRoundOver = true;
     }
 
     public void finishGame()
@@ -240,15 +234,15 @@ public class BlackJackServer extends JFrame
                 while(!isGameOver)
                 {
                     displayMessage("Reamining cards : " + deckIndex + "\n");
-                    output.format("debugging, reached the beginning\n");
-                    output.flush();
+                    //output.format("debugging, reached the beginning\n");
+                    //output.flush();
                     gameLock.lock();
                     try
                     {
                         while(!players[0].canStartRound || !players[1].canStartRound)
                         {
-                            output.format("debugging, inside the while loop, will be waiting\n");
-                            output.flush();
+                            //output.format("debugging, inside the while loop, will be waiting\n");
+                            //output.flush();
                             canStart.await();
                         }
                     }
@@ -260,8 +254,8 @@ public class BlackJackServer extends JFrame
                     {
                         gameLock.unlock();
                     }
-                    output.format("debugging, will be dealing cards\nPlayer to deal: %d\n", playerToDeal);
-                    output.flush();
+                    //output.format("debugging, will be dealing cards\nPlayer to deal: %d\n", playerToDeal);
+                    //output.flush();
                     gameLock.lock();
                     try
                     {
@@ -301,8 +295,8 @@ public class BlackJackServer extends JFrame
                                 drawCard();
                             else if(command.equals("DONE"))
                             {
-                                output.format("debugging done signal 1\n");
-                                output.flush();
+                                //output.format("debugging done signal 1\n");
+                                //output.flush();
                                 gameLock.lock();
                                 try
                                 {
@@ -312,8 +306,8 @@ public class BlackJackServer extends JFrame
                                     }
                                     finishRoundPlayer();
                                     roundCondition.signal();
-                                    output.format("debugging player to handle change\n");
-                                    output.flush();
+                                    //output.format("debugging player to handle change\n");
+                                    //output.flush();
                                     playerToDeal = (playerNumber + 1) % 2; 
                                     otherPlayerTurn.signal();
                                 }
@@ -327,15 +321,37 @@ public class BlackJackServer extends JFrame
                                 }
                                 break;
                             }
+                            else if(command.equals("FINISH"))
+                            {
+                                gameLock.lock();
+                                try
+                                {
+                                    //output.format("debugging finish signal Player %d finishing the game\n",playerNumber);
+                                    //output.flush();
+                                    if(!isGameOver)
+                                        finishGame();
+                                }
+                                finally
+                                {
+                                    gameLock.unlock();
+                                }
+                                break;
+                            }
                         }
+                    }
+                    if(isGameOver)
+                    {
+                        //output.format("debugging finish signal Player %d \n",playerNumber);
+                        //output.flush();
+                        break;
                     }
                     gameLock.lock();
                     try
                     {
                         while(!players[0].isRoundFinished() || !players[1].isRoundFinished())
                         {
-                            output.format("debugging. Player %d waiting for other player\n", playerNumber);
-                            output.flush();
+                            //output.format("debugging. Player %d waiting for other player\n", playerNumber);
+                            //output.flush();
                             roundCondition.await();
                         }
                     }
@@ -347,17 +363,17 @@ public class BlackJackServer extends JFrame
                     {
                         gameLock.unlock();
                     }   
-                    output.format("Outside of the round loop\n");
-                    output.flush();
+                    //output.format("Outside of the round loop\n");
+                    //output.flush();
                     gameLock.lock();
                     try 
                     {
-                        output.format("debugging dealer calculation\nPlayer %d inside try body\n", playerNumber);
-                        output.flush();
+                        //output.format("debugging dealer calculation\nPlayer %d inside try body\n", playerNumber);
+                        //output.flush();
                         if(!dealerScoreCalculatedFlag)
                         {
-                            output.format("debugging dealer calculation\nPlayer %d inside if\n", playerNumber);
-                            output.flush();
+                            //output.format("debugging dealer calculation\nPlayer %d inside if\n", playerNumber);
+                            //output.flush();
                             Card dealerFirst = dealerHand.get(0);
                             displayMessage("Showing dealer's hand\n " + dealerFirst.toString() + "\n");
                             for (Player player : players) 
@@ -400,8 +416,8 @@ public class BlackJackServer extends JFrame
                     {
                         gameLock.unlock();
                     }
-                    output.format("debugging dealer calculation\nPlayer %d outside of  try body\n", playerNumber);
-                    output.flush();
+                    //output.format("debugging dealer calculation\nPlayer %d outside of  try body\n", playerNumber);
+                    //output.flush();
                     calculateScore();
                     if(playerScore == 21)
                     {
@@ -458,14 +474,17 @@ public class BlackJackServer extends JFrame
                             gameLock.unlock();
                         }
                     }
-                    output.format("debugging, reached the end\n");
-                    output.flush();
+                    //output.format("debugging, reached the end\n");
+                    //output.flush();
                 }
             }
             finally
             {
                 try
                 {
+                    //output.format("debugging finish signal \n");
+                    //output.flush();
+                    displayMessage("Player " + playerNumber + " finished");
                     connection.close();
                 }
                 catch(IOException ioException)
